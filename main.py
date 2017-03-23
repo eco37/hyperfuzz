@@ -17,15 +17,10 @@ def print_header():
            |___/|_|                                 
     """
 
-def output_package(filename, data):
+def write_data(filename, data):
     #FIXME: Check if file exists
     with open(filename, 'w') as package_file:
         package_file.write(data)
-        
-def output_result_csv(filename, data):
-    #FIXME: Check if file exists
-    with open(filename, 'a') as result_file:
-        result_file.write(data)
         
 def fuzz(host, port, data):
     response = ""
@@ -83,6 +78,7 @@ def run_sequal(host, port, package, file_handlers, output):
     print "[*] Number of iterations: {0}".format(rows)
     
     items = []
+    html = "<html>\n<head></head>\n<body>\n<table border=\"2\">"
     for i in range(rows):
         tmp = package
         for key, value in file_handlers.items():
@@ -90,20 +86,24 @@ def run_sequal(host, port, package, file_handlers, output):
             tmp = tmp.replace(key, line)
             items.append(line)
             if output:
-                output_package(output + "/packages/" + str(i) + "_request.txt", tmp)
+                write_data(output + "/packages/" + str(i) + "_request.txt", tmp)
         
         response, time_elapsed = fuzz(host, port, tmp)
         return_code = response.split(' ')[1]
         
         if output:
-            output_package(output + "/packages/" + str(i) + "_response.txt", response)
+            write_data(output + "/packages/" + str(i) + "_response.txt", response)
             
         item_str = '|'.join('"' + str(x) + '"' for x in items)
         print "[*] {0}: {1} : {2} : {3}".format(i, item_str, return_code, time_elapsed)
         if output:
-            output_result_csv(output + "/result.csv", "{0},{1},{2},{3}\n".format(i, item_str, return_code, time_elapsed))
+            write_data(output + "/result.csv", "{0},{1},{2},{3}\n".format(i, item_str, return_code, time_elapsed))
+            html += "<tr>\n<td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td>\n".format(i, item_str, return_code, time_elapsed)
         
         items = []
+    
+    html += "</table>\n</body>\n</html>"
+    write_data(output + "/result.html", html)
         
 def main(hostname, port, data_file, mode, output):    
     with open(data_file, 'r') as package_file:
