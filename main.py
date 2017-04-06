@@ -4,6 +4,8 @@ import os, sys, re
 import argparse
 import socket
 import time
+from HTMLParser import HTMLParser
+import base64
 
 BUFF_SIZE = 1024
 
@@ -56,8 +58,10 @@ def fuzz(host, port, data):
     return (response, time_elapsed)
 
 def run_sequal(host, port, package, file_handlers, output):
+    parser = HTMLParser
     first = True
     len_differ = False
+    
     rows = 0
     for key, value in file_handlers.items():
         tmp = len(value.readlines())
@@ -78,7 +82,71 @@ def run_sequal(host, port, package, file_handlers, output):
     print "[*] Number of iterations: {0}".format(rows)
     
     items = []
-    html = "<html>\n<head></head>\n<body>\n<table border=\"2\">"
+    html = """<html>
+            <head>
+            <script>
+                function close_div()
+                {
+                    var div = document.getElementById("data_diag");
+                    div.style.display = 'none';
+                }
+
+                function open_div(obj, render=false)
+                {
+                    var div = document.getElementById("data_diag");
+                    div.style.display = 'block';
+                    div.style.width = '60%';
+                    div.style.height = '60%';
+                    div.style.left = '20%';
+                    div.style.top = '20%';
+                    div.style.backgroundColor = 'white';
+
+                    if( render === true )
+                        div.style.overflowX = 'scroll';
+                    else
+                        div.style.overflowX = 'none';
+
+                    var html = '<b><a href="#" onclick="close_div();">Exit</a></b>';
+                    if( render === false )
+                    {
+                        html += '<center><h1>Request</h1></center>';
+                        html += '<pre>' + atob(obj.getAttribute("data-request")) + '</pre>';
+                        
+                        html += '<br><br><hr><br><br>';
+                    }
+                    
+                    if( render === true )
+                    {
+                        html += ' | <b><a href="#" onclick="open_div(this, false);" data-response="';
+                        html += obj.getAttribute("data-response") + '" data-request="' + obj.getAttribute("data-request") + '">';
+                        html += 'Back</a></b></center>';
+                    }
+
+                    html += '<center><h1>Response</h1></center>';
+                    
+                    if( render === false )
+                    {
+                        html += '<center><i><a href="#" onclick="open_div(this, true);" data-response="';
+                        html += obj.getAttribute("data-response") + '" data-request="' + obj.getAttribute("data-request") + '">';
+                        html += 'Render</a></i></center>';
+                    }
+                    
+                    if( render === true )
+                        html += '<pre>' + atob(obj.getAttribute("data-response")) + '</pre>';
+                    else
+                        //FIXME: HTML Encode here
+                        html += '<pre>' + atob(obj.getAttribute("data-response")) + '</pre>';
+
+
+                    div.innerHTML = html;
+                }
+            </script>
+            </head>
+            <body>
+            <div id="data_diag" style="display: none; border: 1px solid black; position: absolute; overflow-y: scroll;">foobar</div>
+            <table border=\"2\">
+            """
+
     for i in range(rows):
         tmp = package
         for key, value in file_handlers.items():
@@ -98,12 +166,13 @@ def run_sequal(host, port, package, file_handlers, output):
         print "[*] {0}: {1} : {2} : {3}".format(i, item_str, return_code, time_elapsed)
         if output:
             write_data(output + "/result.csv", "{0},{1},{2},{3}\n".format(i, item_str, return_code, time_elapsed))
-            html += "<tr>\n<td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td>\n".format(i, item_str, return_code, time_elapsed)
+            html += "<tr>\n<td>{0}</td><td><a href='#' onclick='open_div(this);' data-response='{1}' data-request='{2}'>{3}</a></td><td>{4}</td><td>{5}</td>\n".format(i, base64.b64encode(response), base64.b64encode(tmp), item_str, return_code, time_elapsed)
         
         items = []
     
-    html += "</table>\n</body>\n</html>"
-    write_data(output + "/result.html", html)
+    if output:
+        html += "</table>\n</body>\n</html>"
+        write_data(output + "/result.html", html)
         
 def main(hostname, port, data_file, mode, output):    
     with open(data_file, 'r') as package_file:
