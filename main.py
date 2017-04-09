@@ -163,9 +163,9 @@ def run_sequal(host, port, package, file_handlers, output):
             write_data(output + "/packages/" + str(i) + "_response.txt", response)
             
         item_str = '|'.join('"' + str(x) + '"' for x in items)
-        print "[*] {0}: {1} : {2} : {3}".format(i, item_str, return_code, time_elapsed)
+        print "[*] {0}: {1} : {2} : {3} : {4}".format(i, item_str, return_code, time_elapsed, len(response))
         if output:
-            write_data(output + "/result.csv", "{0},{1},{2},{3}\n".format(i, item_str, return_code, time_elapsed))
+            write_data(output + "/result.csv", "{0},{1},{2},{3},{4}\n".format(i, item_str, return_code, time_elapsed, len(response)))
             html += "<tr>\n<td>{0}</td><td><a href='#' onclick='open_div(this);' data-response='{1}' data-request='{2}'>{3}</a></td><td>{4}</td><td>{5}</td>\n".format(i, base64.b64encode(response), base64.b64encode(tmp), item_str, return_code, time_elapsed)
         
         items = []
